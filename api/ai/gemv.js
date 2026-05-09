@@ -1,3 +1,5 @@
+
+
 const axios = require('axios');
 const fs = require('fs');
 
@@ -10,7 +12,6 @@ const meta = {
 
 const convoFile = 'convo.json';
 const model = "gemini-2.5-flash";
-const API_KEY = "AIzaSyDBzoZrHXD5XNClMfXTaZEmA0LYCgy54nY"; // Inserted API key
 
 // Ensure conversation file exists
 if (!fs.existsSync(convoFile)) {
@@ -44,8 +45,11 @@ async function onStart({ req, res }) {
     });
   }
 
-  // Use the hardcoded API key instead of requiring it from query params
-  const effectiveApiKey = API_KEY;
+  if (!apikey) {
+    return res.status(400).json({
+      error: 'Missing "apikey" parameter. Example: /gemini-vision?prompt=hi&uid=123&apikey=GEMINI_API_KEY > https://aistudio.google.com/api-keys'
+    });
+  }
 
   try {
     // Handle "clear" command
@@ -88,9 +92,9 @@ async function onStart({ req, res }) {
       }))
     };
 
-    // Send request to Gemini API using hardcoded API key
+    // Send request to Gemini API using provided API key
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${effectiveApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apikey}`,
       payload,
       {
         headers: {
