@@ -3,22 +3,14 @@ const fs = require('fs');
 
 const meta = {
   name: 'Gemini Vision (Conversational)',
-  path: '/gemini-vision?prompt=&uid=&imgUrl=',
+  path: '/gemini-vision?prompt=&uid=&imgUrl=&apikey=',
   method: 'get',
   category: 'ai'
 };
 
 const convoFile = 'convo.json';
 const model = "gemini-2.5-flash";
-
-// List of API keys for failover
-const API_KEYS = [
-  "AIzaSyDBzoZrHXD5XNClMfXTaZEmA0LYCgy54nY",
-  "AIzaSyAD0_b_fGFCFbP9DhyAAunwLzgIU9BDHOw",
-  "AIzaSyD8rsMqYMyezsjpk8JzKPQV1XaQUz71SZI",
-  "AIzaSyAlEmwYV4rQHJ3cfP9Zuy0T4yZSwI5M1iM",
-  "AIzaSyAEd_7e8VWVibi8OfRonXuo1QoOwLBwGU8"
-];
+const API_KEY = "AIzaSyDBzoZrHXD5XNClMfXTaZEmA0LYCgy54nY"; // Inserted API key
 
 // Ensure conversation file exists
 if (!fs.existsSync(convoFile)) {
@@ -42,30 +34,18 @@ function clearConversation(uid) {
   fs.writeFileSync(convoFile, JSON.stringify(convos, null, 2), 'utf-8');
 }
 
-async function callGeminiAPI(apiKey, payload) {
-  const response = await axios.post(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    payload,
-    {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-        'Content-Type': 'application/json'
-      },
-      timeout: 30000
-    }
-  );
-  return response;
-}
-
 async function onStart({ req, res }) {
-  const { prompt, uid, imgUrl, img } = req.query;
+  const { prompt, uid, imgUrl, img, apikey } = req.query;
 
   if (!prompt || !uid) {
     return res.status(400).json({
       error: 'Both "prompt" and "uid" parameters are required',
-      example: '/gemini-vision?prompt=hello&uid=123'
+      example: '/gemini-vision?prompt=hello&uid=123&apikey=YOUR_KEY'
     });
   }
+
+  // Use the hardcoded API key instead of requiring it from query params
+  const effectiveApiKey = API_KEY;
 
   try {
     // Handle "clear" command
@@ -108,28 +88,19 @@ async function onStart({ req, res }) {
       }))
     };
 
-    // Try each API key until one works
-    let lastError = null;
-    let response = null;
-    
-    for (let i = 0; i < API_KEYS.length; i++) {
-      try {
-        response = await callGeminiAPI(API_KEYS[i], payload);
-        lastError = null;
-        break; // Success, exit the loop
-      } catch (error) {
-        lastError = error;
-        console.error(`API Key ${i + 1} failed:`, error.message);
-        // Continue to next key
+    // Send request to Gemini API using hardcoded API key
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${effectiveApiKey}`,
+      payload,
+      {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+          'Content-Type': 'application/json'
+        }
       }
-    }
+    );
 
-    // If all keys failed
-    if (lastError || !response) {
-      throw new Error('All API keys failed. Last error: ' + (lastError?.message || 'Unknown error'));
-    }
-
-    const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "No response from AI.";
+    const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "404.";
 
     // Save AI response into memory
     conversation.push({ role: 'model', parts: [{ text }] });
@@ -144,7 +115,7 @@ async function onStart({ req, res }) {
     console.error('Gemini Vision Error:', error.message);
     res.status(500).json({
       status: false,
-      error: 'Failed to get response from Gemini Vision API: ' + error.message
+      error: 'Failed to get response from Gemini Vision API'
     });
   }
 }
