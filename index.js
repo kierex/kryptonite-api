@@ -50,25 +50,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// ============ FACEBOOK CREATOR ROUTES ============
-const facebookCreator = require('./facebookCreator');
-
-// GET endpoint for Facebook account creation
-app.get('/facebook', limiter, facebookCreator.handleGetRequest);
-
-// Health check for Facebook creator
-app.get('/facebook/health', limiter, (req, res) => {
-    res.json({
-        status: 'running',
-        endpoints: {
-            create: '/facebook?action=create&type=phone&count=1&check=false',
-            generate: '/facebook?action=generate&type=phone',
-            stats: '/facebook?action=stats'
-        }
-    });
-});
-// ============ END FACEBOOK CREATOR ROUTES ============
-
 const apiFolder = path.join(__dirname, 'api');
 let totalRoutes = 0;
 const apiModules = [];
