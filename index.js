@@ -50,6 +50,25 @@ app.use((req, res, next) => {
   next();
 });
 
+// ============ FACEBOOK CREATOR ROUTES ============
+const facebookCreator = require('./facebookCreator');
+
+// GET endpoint for Facebook account creation
+app.get('/facebook', limiter, facebookCreator.handleGetRequest);
+
+// Health check for Facebook creator
+app.get('/facebook/health', limiter, (req, res) => {
+    res.json({
+        status: 'running',
+        endpoints: {
+            create: '/facebook?action=create&type=phone&count=1&check=false',
+            generate: '/facebook?action=generate&type=phone',
+            stats: '/facebook?action=stats'
+        }
+    });
+});
+// ============ END FACEBOOK CREATOR ROUTES ============
+
 const apiFolder = path.join(__dirname, 'api');
 let totalRoutes = 0;
 const apiModules = [];
@@ -67,7 +86,7 @@ const loadModules = (dir) => {
           console.warn(chalk.bgHex('#FF9999').hex('#333').bold(`Invalid module in ${filePath}: Missing or invalid meta/onStart`));
           return;
         }
-        
+
         const basePath = module.meta.path.split('?')[0];
         const routePath = '/api' + basePath;
         const method = (module.meta.method || 'get').toLowerCase();
